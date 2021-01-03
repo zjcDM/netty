@@ -975,6 +975,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     private void doStartThread() {
         assert thread == null;
+        // 使用NioEventLoop所包含的executor的execute()方法
         executor.execute(new Runnable() {
             @Override
             public void run() {
@@ -986,6 +987,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 boolean success = false;
                 updateLastExecutionTime();
                 try {
+                    // 执行了一个不会停止的for，用于完成任务队列中的任务和处理IO事件
                     SingleThreadEventExecutor.this.run();
                     success = true;
                 } catch (Throwable t) {

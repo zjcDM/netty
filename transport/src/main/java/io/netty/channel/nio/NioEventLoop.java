@@ -153,7 +153,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     }
 
     private static final class SelectorTuple {
+        // NIO原生selector
         final Selector unwrappedSelector;
+        // 优化过的selector（数组实现）
         final Selector selector;
 
         SelectorTuple(Selector unwrappedSelector) {
@@ -476,6 +478,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 selectCnt++;
                 cancelledKeys = 0;
                 needsToSelectAgain = false;
+                // 该变量用于设置“处理就绪channel的IO所使用的时间”与“处理任务队列中任务使用时间”的比例 该值为整型，不大于100
                 final int ioRatio = this.ioRatio;
                 boolean ranTasks;
                 if (ioRatio == 100) {
@@ -488,12 +491,15 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                         ranTasks = runAllTasks();
                     }
                 } else if (strategy > 0) {
+                    // 记录处理就绪channel的IO开始执行的时间点
                     final long ioStartTime = System.nanoTime();
                     try {
                         processSelectedKeys();
                     } finally {
                         // Ensure we always run tasks.
+                        // 计算出处理就绪channel的IO所使用的时长
                         final long ioTime = System.nanoTime() - ioStartTime;
+                        // 按比例执行任务队列中的任务
                         ranTasks = runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
                     }
                 } else {
@@ -700,6 +706,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
                 // remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking
                 // See https://github.com/netty/netty/issues/924
+                // 把除了连接事件的其他感兴趣事件重新注册回去
                 int ops = k.interestOps();
                 ops &= ~SelectionKey.OP_CONNECT;
                 k.interestOps(ops);
@@ -801,6 +808,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         return unwrappedSelector;
     }
 
+    // 返回就绪的channel的数量，可以为0
     int selectNow() throws IOException {
         return selector.selectNow();
     }

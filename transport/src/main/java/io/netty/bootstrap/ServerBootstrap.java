@@ -129,11 +129,13 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
     @Override
     void init(Channel channel) {
+        // serverSocketChannel自己的配置和属性设置
         setChannelOptions(channel, newOptionsArray(), logger);
         setAttributes(channel, attrs0().entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY));
 
         ChannelPipeline p = channel.pipeline();
 
+        // 所有child开头的属性都是为了给这个server接受连接之后，创建的子channel使用
         final EventLoopGroup currentChildGroup = childGroup;
         final ChannelHandler currentChildHandler = childHandler;
         final Entry<ChannelOption<?>, Object>[] currentChildOptions;

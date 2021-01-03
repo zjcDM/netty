@@ -88,9 +88,11 @@ final class ChannelHandlerMask {
     /**
      * Calculate the {@code executionMask}.
      */
+    // mask是一个int，把它看成32位二进制，每一位表示一个方法，则需要执行的方法对应位标记是1
     private static int mask0(Class<? extends ChannelHandler> handlerType) {
         int mask = MASK_EXCEPTION_CAUGHT;
         try {
+            // 首先把handler中的所有方法都标记为需要执行，然后判断方法上面是否有@skip注解，有的话把对应的执行标记去掉
             if (ChannelInboundHandler.class.isAssignableFrom(handlerType)) {
                 mask |= MASK_ALL_INBOUND;
 

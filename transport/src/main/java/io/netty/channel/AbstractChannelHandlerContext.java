@@ -105,7 +105,9 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                                   String name, Class<? extends ChannelHandler> handlerClass) {
         this.name = ObjectUtil.checkNotNull(name, "name");
         this.pipeline = pipeline;
+        // 每个处理器节点都需要绑定一个executor，如果当前处理器的 executor 为空则直接使用 channel 的 Executor 来执行当前处理器节点里的处理器方法
         this.executor = executor;
+        // 计算handler是否需要执行的标记
         this.executionMask = mask(handlerClass);
         // Its ordered if its driven by the EventLoop or the given Executor is an instanceof OrderedEventExecutor.
         ordered = executor == null || executor instanceof OrderedEventExecutor;
@@ -920,6 +922,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             // Ensure we never update when the handlerState is REMOVE_COMPLETE already.
             // oldState is usually ADD_PENDING but can also be REMOVE_COMPLETE when an EventExecutor is used that is not
             // exposing ordering guarantees.
+            // 通过CAS方式将处理器状态修改为添加完毕，这里可以学习下这种线程安全操作的实现方式：volatile+AtomicIntegerFieldUpdater
             if (HANDLER_STATE_UPDATER.compareAndSet(this, oldState, ADD_COMPLETE)) {
                 return true;
             }

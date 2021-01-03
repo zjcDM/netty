@@ -91,12 +91,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     protected DefaultChannelPipeline(Channel channel) {
         this.channel = ObjectUtil.checkNotNull(channel, "channel");
+        // 记录成功的future
         succeededFuture = new SucceededChannelFuture(channel, null);
+        // 记录异常的future，其中注册了一个异常监听器，若发生异常，会触发pipeline的fireExceptionCaught方法的执行
         voidPromise =  new VoidChannelPromise(channel, true);
 
+        // pipeline的尾处理器
         tail = new TailContext(this);
+        // pipeline的头处理器
         head = new HeadContext(this);
 
+        // 收尾关联称为一条pipeline，新增的handler都是往中间加
         head.next = tail;
         tail.prev = head;
     }
@@ -124,6 +129,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         if (group == null) {
             return null;
         }
+
+        //SINGLE_EVENTEXECUTOR_PER_GROUP表示当前处理器节点是否绑定使用同一个EventLoop
         Boolean pinEventExecutor = channel.config().getOption(ChannelOption.SINGLE_EVENTEXECUTOR_PER_GROUP);
         if (pinEventExecutor != null && !pinEventExecutor) {
             return group.next();
@@ -199,10 +206,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public final ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
         final AbstractChannelHandlerContext newCtx;
         synchronized (this) {
+            // 不能重复添加，这边需要注意，如果handler不是sharable的，也不能重复添加
             checkMultiplicity(handler);
 
             newCtx = newContext(group, filterName(name, handler), handler);
 
+            // 将新节点添加到pipeline
             addLast0(newCtx);
 
             // If the registered is false it means that the channel was not registered on an eventLoop yet.
@@ -214,12 +223,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 return this;
             }
 
+            // 若该eventloop绑定的线程与当前线程不是同一个，则执行下面的代码
             EventExecutor executor = newCtx.executor();
             if (!executor.inEventLoop()) {
                 callHandlerAddedInEventLoop(newCtx, executor);
                 return this;
             }
         }
+        // 若该eventloop绑定的线程与当前线程是同一个线程，则调用重写的handlerAdded()方法
         callHandlerAdded0(newCtx);
         return this;
     }
@@ -277,6 +288,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         ctx.prev = newCtx;
     }
 
+    // 为匿名handler取名
     private String filterName(String name, ChannelHandler handler) {
         if (name == null) {
             return generateName(handler);
@@ -1134,6 +1146,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private void callHandlerAddedInEventLoop(final AbstractChannelHandlerContext newCtx, EventExecutor executor) {
+        // 将当前节点状态设置成处理中，等待callHandlerAdded0执行完成
         newCtx.setAddPending();
         executor.execute(new Runnable() {
             @Override
@@ -1242,6 +1255,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     // A special catch-all handler that handles both bytes and messages.
+    // 尾处理器是一个inbound处理器，所有方法都是回调方法，用于进行一些收尾性工作，比如释放一些变量
     final class TailContext extends AbstractChannelHandlerContext implements ChannelInboundHandler {
 
         TailContext(DefaultChannelPipeline pipeline) {
@@ -1302,6 +1316,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
+    // head处理器同时实现inbound和outbound
     final class HeadContext extends AbstractChannelHandlerContext
             implements ChannelOutboundHandler, ChannelInboundHandler {
 
@@ -1407,6 +1422,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            // 接受消息，传递给pipeline的下一个handler
             ctx.fireChannelRead(msg);
         }
 

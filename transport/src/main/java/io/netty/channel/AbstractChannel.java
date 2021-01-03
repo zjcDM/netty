@@ -70,8 +70,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected AbstractChannel(Channel parent) {
         this.parent = parent;
+        // 为channel生成ID，由5部分组成确保唯一性
         id = newId();
+        // 创建一个封装底层操作（用于 I/O 线程调用传输时使用，用户代码无法调用）的对象
         unsafe = newUnsafe();
+        // 创建与这个channel绑定的pipeline，用来进行事件处理
         pipeline = newChannelPipeline();
     }
 
@@ -462,6 +465,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
+            // channel与eventLoop的绑定就发生在这里，
+            // 需要注意，这里的eventLoop还没有绑定线程，因为这个线程还没有创建
             AbstractChannel.this.eventLoop = eventLoop;
 
             if (eventLoop.inEventLoop()) {

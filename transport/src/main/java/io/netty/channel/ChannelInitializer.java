@@ -132,6 +132,8 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
                 // We do so to prevent multiple calls to initChannel(...).
                 exceptionCaught(ctx, cause);
             } finally {
+                //如果pipeline中存在当前处理器（一般就是匿名的ChannelInitializer），就将它从pipeline中移除
+                //所以ChannelInitializer其实就是一个媒介handler，用来把我们需要添加的handler做些准备动作加入流水线
                 ChannelPipeline pipeline = ctx.pipeline();
                 if (pipeline.context(this) != null) {
                     pipeline.remove(this);

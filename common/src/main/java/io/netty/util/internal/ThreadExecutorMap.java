@@ -51,9 +51,11 @@ public final class ThreadExecutorMap {
     public static Executor apply(final Executor executor, final EventExecutor eventExecutor) {
         ObjectUtil.checkNotNull(executor, "executor");
         ObjectUtil.checkNotNull(eventExecutor, "eventExecutor");
+        // 给EventLoop的Executor
         return new Executor() {
             @Override
             public void execute(final Runnable command) {
+                // 这个execute方法是EventLoopGroup的成员executor的execute方法
                 executor.execute(apply(command, eventExecutor));
             }
         };

@@ -76,6 +76,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * @param ch                the underlying {@link SelectableChannel} on which it operates
      * @param readInterestOp    the ops to set to receive data from the {@link SelectableChannel}
      */
+    // 调用父类构造 super(parent);
+    // 将前面创建的原生 Channel 复制给属性保存 this.ch = ch;
+    // 当前 channel 的关注事件属性赋值 this.readInterestOp = readInterestOp;
+    // 将 NIO 原生 Channel 设置为非阻塞 ch.configureBlocking(false);
     protected AbstractNioChannel(Channel parent, SelectableChannel ch, int readInterestOp) {
         super(parent);
         this.ch = ch;
@@ -377,6 +381,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         boolean selected = false;
         for (;;) {
             try {
+                // JDK的原生channel注册到JDK原生selector
+                // 注意这里监听事件是0，表示不关注任何事件。这是因为netty封装的channel在初始化的时候已经设置了监听的事件，这里的channel注册之后，如果有连接过来，则会拿nettychannel注册事件
                 selectionKey = javaChannel().register(eventLoop().unwrappedSelector(), 0, this);
                 return;
             } catch (CancelledKeyException e) {

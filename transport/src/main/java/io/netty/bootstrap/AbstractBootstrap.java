@@ -269,18 +269,24 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     private ChannelFuture doBind(final SocketAddress localAddress) {
+        // 创建、初始化channel，并将其注册到selector
         final ChannelFuture regFuture = initAndRegister();
         final Channel channel = regFuture.channel();
+        // 若上述操作过程中出现异常，则直接返回future
         if (regFuture.cause() != null) {
             return regFuture;
         }
 
+        // 有可能是正常结束，或者发生异常，或者被取消
         if (regFuture.isDone()) {
             // At this point we know that the registration was complete and successful.
             ChannelPromise promise = channel.newPromise();
+            // 绑定指定端口
             doBind0(regFuture, channel, localAddress, promise);
             return promise;
         } else {
+            // 如果channel创建初始化未完成，则先添加监听器，等异步操作完成之后再进行端口绑定
+
             // Registration future is almost always fulfilled already, but just in case it's not.
             final PendingRegistrationPromise promise = new PendingRegistrationPromise(channel);
             regFuture.addListener(new ChannelFutureListener() {
@@ -307,7 +313,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     final ChannelFuture initAndRegister() {
         Channel channel = null;
         try {
+            // 泛型工厂+反射 创建channel
             channel = channelFactory.newChannel();
+            // 初始化channel
             init(channel);
         } catch (Throwable t) {
             if (channel != null) {
@@ -320,6 +328,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             return new DefaultChannelPromise(new FailedChannel(), GlobalEventExecutor.INSTANCE).setFailure(t);
         }
 
+        // 将channel注册到selector
         ChannelFuture regFuture = config().group().register(channel);
         if (regFuture.cause() != null) {
             if (channel.isRegistered()) {
@@ -352,7 +361,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         channel.eventLoop().execute(new Runnable() {
             @Override
             public void run() {
-                if (regFuture.isSuccess()) {
+                if (regFuture.isSuccess()) {// 只有当channel初始化注册成功后，才会进行绑定
                     channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
                 } else {
                     promise.setFailure(regFuture.cause());
