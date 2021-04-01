@@ -1,0 +1,66 @@
+public class ConcurrentLRUCache<K,V> {
+    //缓存最大容量
+    private int CACHE_MAX_SIZE;
+    //内部维护Map对象
+    private final Map<K, V> cache;
+    public ConcurrentLRUCache(int cACHE_MAX_SIZE) {
+	super();
+	CACHE_MAX_SIZE = cACHE_MAX_SIZE;
+	cache = new LinkedHashMap<K,V>(CACHE_MAX_SIZE,0.75f,true){
+	    private static final long serialVersionUID = 1L;
+
+	    @Override
+	    protected boolean removeEldestEntry(Entry<K, V> eldest) {
+		return size() > CACHE_MAX_SIZE;
+	    }
+	    
+	};
+    }
+    
+    /**
+     * 
+     * @Title: put
+     * @Description: 同步put
+     * @param @param key
+     * @param @param value     
+     * @return void     
+     * @throws
+     */
+    public void put(K key, V value) {
+	synchronized (cache) {
+	    cache.put(key, value);
+	}
+    }
+    
+    /**
+     * 
+     * @Title: get
+     * @Description: 同步get
+     * @param @param key
+     * @param @param value     
+     * @return void     
+     * @throws
+     */
+    public V get(K key) {
+	synchronized (cache) {
+	    return cache.get(key);
+	}
+    }
+
+    /**
+     * 复写toString方法，打印所有的内容对象
+     */
+    @Override
+    public String toString() {
+	synchronized (cache) {
+	    StringBuilder sb = new StringBuilder();
+	    for(Map.Entry<K, V> entry : cache.entrySet()) {
+		K key = entry.getKey();
+		V value = entry.getValue();
+		sb.append("{ key: ").append(String.valueOf(key)).append(", value: ").append(String.valueOf(value)).append("}");
+	    }
+	    return sb.toString();
+	}
+    }
+
+}
